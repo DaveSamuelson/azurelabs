@@ -6,7 +6,6 @@ Provides some examples on how to deploy an Azure Dev / Test Lab
     <img src="http://azuredeploy.net/deploybutton.png"/>
 </a>
 
-<h2>Visualise the Template</h2>
 <a href="http://armviz.io/#/?load=https://raw.githubusercontent.com/davesamuelson/NovemberHackathon/master/scripts/QuickDeployHackathonResources.json" target="_blank">
   <img src="http://armviz.io/visualizebutton.png"/>
 </a>
