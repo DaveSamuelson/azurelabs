@@ -7,6 +7,35 @@ Provides some examples on how to deploy an Azure Dev / Test Lab
 </ul>
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 <h2><a id="content-overview" class="anchor" href="#1-overview" aria-hidden="true"></a>1. Solution Overview</h2>
 
 <blockquote>
