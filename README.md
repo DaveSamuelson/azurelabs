@@ -8,7 +8,19 @@ Provides some examples on how to deploy an Azure Dev / Test Lab
 
 
 
+<p>
+<p>
 
+<p>
+<p>
+
+<p>
+
+<p>
+
+<p>
+
+<p>
 
 
 
