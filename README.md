@@ -8,45 +8,6 @@ Provides some examples on how to deploy an Azure Dev / Test Lab
 
 
 
-<p>
-<p>
-
-<p>
-<p>
-
-<p>
-
-<p>
-
-<p>
-
-<p>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 <h2><a id="content-overview" class="anchor" href="#1-overview" aria-hidden="true"></a>1. Solution Overview</h2>
 
@@ -88,3 +49,8 @@ Customers want</p>
 <td align="left"><ul> <li>Azure Active Directory Integration </li> <li>Standardized Azure native Monitoring </li>  </ul></td>
 </tr>
 </tbody></table>
+
+
+
+
+<h2><a id="content-provision-lab" class="anchor" href="#2-provision-lab" aria-hidden="true"></a>2. Provision a Lab</h2>
