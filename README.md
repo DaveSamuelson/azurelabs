@@ -2,9 +2,9 @@
 Provides some examples on how to deploy an Azure Dev / Test Lab
 
 <h2>Deploy to Azure</h2>
-<a href="https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2Fdavesamuelson%2FNovemberHackathon%2Fmaster%2Fscripts%2FQuickDeployHackathonResources.json" target="_blank">
+<a href="https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2Fdavesamuelson%2Fazurelabs%2Fazuredeploy.json" target="_blank">
     <img src="http://azuredeploy.net/deploybutton.png"/>
-</a><a href="http://armviz.io/#/?load=https://raw.githubusercontent.com/davesamuelson/NovemberHackathon/master/scripts/QuickDeployHackathonResources.json" target="_blank">
+</a><a href="http://armviz.io/#/?load=https://raw.githubusercontent.com/davesamuelson/azurelabs/azuredeploy.json" target="_blank">
   <img src="http://armviz.io/visualizebutton.png"/>
 </a>
 
