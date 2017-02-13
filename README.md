@@ -29,7 +29,7 @@
 
 ##  1. Solution Overview
 
-> ☛ As this solution is currently going through a formal review, we have kept this GitHub public repo  to be a temporary location. Post review, the solution would be made available in <a href="https://azure.microsoft.com/en-us/resources/templates/" target="_blank">Azure QuickStart</a> repo. For any questions, Please reach out to <a href="mailto:azurecompliance@avyanconsulting.com" target="_blank">azurecompliance@avyanconsulting.com</a>
+> ☛ As this solution is currently going through a forma
 
 
 An integrated ARM Template (<a href="https://azure.microsoft.com/en-us/documentation/articles/resource-group-overview/">Azure Resource Manager</a>) that stitches all the above technology into a single deployment. The following is a feature table that is pulled together for your benefit.
