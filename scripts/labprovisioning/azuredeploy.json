@@ -1,216 +1,767 @@
 {
-    "$schema": "http://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json",
-    "contentVersion": "1.0.0.0",
-    "parameters": {
-      "localGatewayName": {
-        "type": "string",
-        "defaultValue": "OnPremisesGateway",
-        "metadata": {
-          "description": "Arbitrary name representing your on-premises gateway resource in Azure"
-        }
-      },
-        "localGatewayIpAddress": {
-            "type": "string",
-            "defaultValue": "1.1.1.1",
-            "metadata": {
-                "description": "Public IP of the on-premises RRAS instance"
-            }
-        },
-        "localAddressPrefix": {
-            "type": "string",
-            "defaultValue": "192.168.0.0/16",
-            "metadata": {
-                "description": "CIDR block representing the address space of the on-premises subnet containing the RRAS instance"
-            }
-        },
-        "virtualNetworkName": {
-            "type": "string",
-            "defaultValue": "SecureAzureVNet",
-            "metadata": {
-                "description": "Arbitrary name for the Azure Virtual Network"
-            }
-        },
-        "azureVNetAddressPrefix": {
-            "type": "string",
-            "defaultValue": "10.17.0.0/16",
-            "metadata": {
-                "description": "CIDR block representing the address space of the Azure VNet"
-            }
-        },
-        "subnetName": {
-            "type": "string",
-            "defaultValue": "SecureSandboxResources",
-            "metadata": {
-                "description": "Arbitrary name for the Azure Subnet"
-            }
-        },
-        "subnetPrefix": {
-            "type": "string",
-            "defaultValue": "10.17.2.0/24",
-            "metadata": {
-                "description": "CIDR block for VM subnet, subset of azureVNetAddressPrefix address space"
-            }
-        },
-        "gatewaySubnetPrefix": {
-            "type": "string",
-            "defaultValue": "10.17.1.0/29",
-            "metadata": {
-                "description": "CIDR block for gateway subnet, subset of azureVNetAddressPrefix address space"
-            }
-        },
-        "gatewayPublicIPName": {
-            "type": "string",
-            "defaultValue": "azureGatewayIP",
-            "metadata": {
-                "description": "Arbitrary name for public IP resource used for the new azure gateway"
-            }
-        },
-        "gatewayName": {
-            "type": "string",
-            "defaultValue": "azureGateway",
-            "metadata": {
-                "description": "Arbitrary name for the new gateway"
-            }
-        },
-        "gatewaySku":{  
-            "type":"string",
-            "defaultValue": "Basic",
-            "allowedValues": [
-                "Basic",
-                "Standard",
-                "HighPerformance"
-            ],
-            "metadata":{  
-                "description":"The Sku of the Gateway. This must be one of Basic, Standard or HighPerformance."
-            }
-      },
-        "connectionName": {
-            "type": "string",
-            "defaultValue": "AzureToOnpremises",
-            "metadata": {
-                "description": "Arbitrary name for the new connection between Azure VNet and on-premises network"
-            }
-        },
-        "sharedKey": {
-            "type": "securestring",
-            "metadata": {
-                "description": "Shared key (PSK) for IPSec tunnel"
-            }
-        }
+  "$schema": "http://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "labName": {
+      "type": "string",
+      "minLength": 4,
+      "metadata": {
+        "description": "This is the name of your lab (no spaces allowed in name)"
+      }
     },
-    "variables": {
-        "vnetID": "[resourceId('Microsoft.Network/virtualNetworks', parameters('virtualNetworkName'))]",
-        "gatewaySubnetRef": "[concat(variables('vnetID'),'/subnets/','GatewaySubnet')]",
-        "subnetRef": "[concat(variables('vnetID'),'/subnets/',parameters('subnetName'))]",
-        "vpnType": "RouteBased",
-        "api-version": "2015-06-15"
+    "cycleType": {
+      "type": "string",
+      "defaultValue": "Custom",
+      "allowedValues": [
+        "CalendarMonth",
+        "Custom"
+      ],
+      "metadata": {
+        "description": "This is the time period for the cost tracking chart i.e. Calendar Month or Custom Period."
+      }
     },
-    "resources": [
-      {
-        "apiVersion": "[variables('api-version')]",
-        "type": "Microsoft.Network/localNetworkGateways",
-        "name": "[parameters('localGatewayName')]",
-        "location": "[resourceGroup().location]",
-        "properties": {
-          "localNetworkAddressSpace": {
-            "addressPrefixes": [
-              "[parameters('localAddressPrefix')]"
-            ]
-          },
-          "gatewayIpAddress": "[parameters('localGatewayIpAddress')]"
-        }
-      },
-      {
-        "apiVersion": "[variables('api-version')]",
-        "name": "[parameters('connectionName')]",
-        "type": "Microsoft.Network/connections",
-        "location": "[resourceGroup().location]",
-        "dependsOn": [
-          "[concat('Microsoft.Network/virtualNetworkGateways/', parameters('gatewayName'))]",
-          "[concat('Microsoft.Network/localNetworkGateways/', parameters('localGatewayName'))]"
-        ],
-        "properties": {
-          "virtualNetworkGateway1": {
-            "id": "[resourceId('Microsoft.Network/virtualNetworkGateways', parameters('gatewayName'))]"
-          },
-          "localNetworkGateway2": {
-            "id": "[resourceId('Microsoft.Network/localNetworkGateways', parameters('localGatewayName'))]"
-          },
-          "connectionType": "IPsec",
-          "routingWeight": 10,
-          "sharedKey": "[parameters('sharedKey')]"
-        }
-      },
-      {
-        "apiVersion": "[variables('api-version')]",
-        "type": "Microsoft.Network/virtualNetworks",
-        "name": "[parameters('virtualNetworkName')]",
-        "location": "[resourceGroup().location]",
-        "properties": {
-          "addressSpace": {
-            "addressPrefixes": [
-              "[parameters('azureVNetAddressPrefix')]"
-            ]
-          },
-          "subnets": [
-            {
-              "name": "[parameters('subnetName')]",
-              "properties": {
-                "addressPrefix": "[parameters('subnetPrefix')]"
-              }
-            },
-            {
-              "name": "GatewaySubnet",
-              "properties": {
-                "addressPrefix": "[parameters('gatewaySubnetPrefix')]"
-              }
-            }
+    "labStartDate": {
+      "type": "string",
+      "defaultValue": "2017-02-01",
+      "metadata": {
+        "description": "This is the estimated start date for monitoing costs (YYYY-MM-DD) e.g. 2017-02-01.   This is used to set the custom time period in the cost tracking chart."
+      }
+    },
+    "estLabEndDate": {
+      "type": "string",
+      "defaultValue": "2017-12-31",
+      "metadata": {
+        "description": "This is the estimated end date for the lab (YYYY-MM-DD) e.g. 2017-02-01.   This is used to set the custom time period in the cost tracking chart."
+      }
+    },
+    "labCost": {
+      "type": "int",
+      "metadata": {
+        "description": "This is the target cost for the lab in $(USD) e.g. 100."
+      }
+    },
+    "displayOnChart25": {
+      "type": "string",
+      "defaultValue": "Enabled",
+      "allowedValues": [
+        "Enabled",
+        "Disabled"
+      ],
+      "metadata": {
+        "description": "This setting displays the 25%  threshold on the cost tracking chart."
+      }
+    },
+    "sendNotification25": {
+      "type": "string",
+      "defaultValue": "Disabled",
+      "allowedValues": [
+        "Enabled",
+        "Disabled"
+      ],
+      "metadata": {
+        "description": "This setting enables a notification to be sent to the specified webhook when the 25% cost threshold is exceeded."
+      }
+    },
+    "displayOnChart50": {
+      "type": "string",
+      "defaultValue": "Enabled",
+      "allowedValues": [
+        "Enabled",
+        "Disabled"
+      ],
+      "metadata": {
+        "description": "This setting displays the 50%  threshold on the cost tracking chart."
+      }
+    },
+    "sendNotification50": {
+      "type": "string",
+      "defaultValue": "Disabled",
+      "allowedValues": [
+        "Enabled",
+        "Disabled"
+      ],
+      "metadata": {
+        "description": "This setting enables a notification to be sent to the specified webhook when the 50% cost threshold is exceeded."
+      }
+    },
+    "displayOnChart75": {
+      "type": "string",
+      "defaultValue": "Enabled",
+      "allowedValues": [
+        "Enabled",
+        "Disabled"
+      ],
+      "metadata": {
+        "description": "This setting displays the 75%  threshold on the cost tracking chart."
+      }
+    },
+    "sendNotification75": {
+      "type": "string",
+      "defaultValue": "Enabled",
+      "allowedValues": [
+        "Enabled",
+        "Disabled"
+      ],
+      "metadata": {
+        "description": "This setting enables a notification to be sent to the specified webhook when the 75% cost threshold is exceeded."
+      }
+    },
+    "displayOnChart100": {
+      "type": "string",
+      "defaultValue": "Enabled",
+      "allowedValues": [
+        "Enabled",
+        "Disabled"
+      ],
+      "metadata": {
+        "description": "This setting displays the 100%  threshold on the cost tracking chart."
+      }
+    },
+    "sendNotification100": {
+      "type": "string",
+      "defaultValue": "Enabled",
+      "allowedValues": [
+        "Enabled",
+        "Disabled"
+      ],
+      "metadata": {
+        "description": "This setting enables a notification to be sent to the specified webhook when the 100% cost threshold is exceeded."
+      }
+    },
+    "displayOnChart125": {
+      "type": "string",
+      "defaultValue": "Disabled",
+      "allowedValues": [
+        "Enabled",
+        "Disabled"
+      ],
+      "metadata": {
+        "description": "This setting displays the 125%  threshold on the cost tracking chart."
+      }
+    },
+    "sendNotification125": {
+      "type": "string",
+      "defaultValue": "Disabled",
+      "allowedValues": [
+        "Enabled",
+        "Disabled"
+      ],
+      "metadata": {
+        "description": "This setting enables a notification to be sent to the specified webhook when the 125% cost threshold is exceeded."
+      }
+    },
+    "restrictVMSizes": {
+      "type": "string",
+      "defaultValue": "Enabled",
+      "allowedValues": [
+        "Enabled",
+        "Disabled"
+      ],
+      "metadata": {
+        "description": "This setting enables / enforces the restricted list of VM sizes that can be used in the lab.  See parameter allowedVMSizes."
+      }
+    },
+    "allowedVMSizes": {
+      "type": "string",
+      "defaultValue": "\"Standard_A3\", \"Standard_A2\"",
+      "minLength": 3,
+      "metadata": {
+        "description": "This is a comma-separated list of restricted VM sizes that can be usedin the lab.   The 'restrictVMSizes' parameter must be 'Enabled' for this list to be active"
+      }
+    },
+    "restrictsVMPerUser": {
+      "type": "string",
+      "defaultValue": "Enabled",
+      "allowedValues": [
+        "Enabled",
+        "Disabled"
+      ],
+      "metadata": {
+        "description": "This setting enables / enforces a restricted number of VMs that can be created by an individual user.  See parameter maxVMPerUser."
+      }
+    },
+    "maxVMPerUser": {
+      "type": "int",
+      "minValue": 0,
+      "defaultValue": 3,
+      "metadata": {
+        "description": "This is the maximum number of VMs that can be created by an individual user"
+      }
+    },
+    "restrictsPremiumVMPerUser": {
+      "type": "string",
+      "defaultValue": "Enabled",
+      "allowedValues": [
+        "Enabled",
+        "Disabled"
+      ],
+      "metadata": {
+        "description": "This setting enables / enforces a restricted number of Premium VMs (SSD) that can be created by an individual user.  See parameter maxPremiumVMPerUser."
+      }
+    },
+    "maxPremiumVMPerUser": {
+      "type": "int",
+      "minValue": 0,
+      "defaultValue": 1,
+      "metadata": {
+        "description": "This is the maximum number of Premium VMs (SSD) that can be created by an individual user"
+      }
+    },
+    "restrictsVMPerLab": {
+      "type": "string",
+      "defaultValue": "Enabled",
+      "allowedValues": [
+        "Enabled",
+        "Disabled"
+      ],
+      "metadata": {
+        "description": "This setting enables / enforces the restricted number of VMs that can be created in the lab.  See parameter maxVMPerLab."
+      }
+    },
+    "maxVMPerLab": {
+      "type": "int",
+      "minValue": 0,
+      "defaultValue": 10,
+      "metadata": {
+        "description": "This is the maximum number of VMs allowed per lab."
+      }
+    },
+    "restrictsPremiumVMPerLab": {
+      "type": "string",
+      "defaultValue": "Enabled",
+      "allowedValues": [
+        "Enabled",
+        "Disabled"
+      ],
+      "metadata": {
+        "description": "This setting enables / enforces the restricted number of Premium VMs (SSD) that can be created in the lab.  See parameter maxPremiumVMPerLab."
+      }
+    },
+    "maxPremiumVMPerLab": {
+      "type": "int",
+      "minValue": 0,
+      "defaultValue": 5,
+      "metadata": {
+        "description": "This is the maximum number of Premium VMs allowed per lab."
+      }
+    },
+    "azureVnetAddressPrefix": {
+      "type": "string",
+      "defaultValue": "10.24.0.0/16",
+      "metadata": {
+        "description": "This is the CIDR block representing the entire address space of the Azure VNet"
+      }
+    },
+    "artifactRepoSecurityToken": {
+      "type": "securestring",
+      "metadata": {
+        "description": "The personal access token required to grant permissions to the repositories"
+      }
+    },
+    "autoShutdownVM": {
+      "type": "string",
+      "defaultValue": "Enabled",
+      "allowedValues": [
+        "Enabled",
+        "Disabled"
+      ],
+      "metadata": {
+        "description": "This setting enables / enforces the automatic shutdown of VMs at a specific time.   See parameter labVMShutdownTime."
+      }
+    },
+    "labVMShutdownTime": {
+      "type": "string",
+      "defaultValue": "19:00",
+      "minLength": 4,
+      "maxLength": 5,
+      "metadata": {
+        "description": "This is the time at which VMs within the Lab will be automatically shutdown e.g. 19:00"
+      }
+    },
+    "autoStartupVM": {
+      "type": "string",
+      "defaultValue": "Enabled",
+      "allowedValues": [
+        "Enabled",
+        "Disabled"
+      ],
+      "metadata": {
+        "description": "This setting enables / enforces the automatic start-up of VMs at a specific time.   See parameter labVMStartupTime."
+      }
+    },
+    "labVMStartupTime": {
+      "type": "string",
+      "defaultValue": "08:00",
+      "minLength": 4,
+      "maxLength": 5,
+      "metadata": {
+        "description": "This is the time at which VMs within the Lab will be automatically started e.g. 06:00"
+      }
+    },
+    "timeZoneId": {
+      "type": "string",
+      "defaultValue": "UTC",
+      "minLength": 3,
+      "metadata": {
+        "description": "This is the Windows time zone id associated with VM start-up / shut-down time e.g. UTC"
+      }
+    },
+    "restrictGalleryImages": {
+      "type": "string",
+      "defaultValue": "Enabled",
+      "allowedValues": [
+        "Enabled",
+        "Disabled"
+      ],
+      "metadata": {
+        "description": "This setting enables / enforces a restricted list of gallery images that can be used in the lab.  See parameter restrictedGalleryImagesList."
+      }
+    },
+    "restrictedGalleryImagesList": {
+      "type": "array",
+      "defaultValue": [
+        "{\"offer\":\"VisualStudio\",\"publisher\":\"MicrosoftVisualStudio\",\"sku\":\"Azure-Jenkins-012\",\"osType\":\"Linux\",\"version\":\"latest\"}"
+      ],
+      "metadata": {
+        "description": "This is a restricted list of gallery images available for use in the lab."
+      }
+    }
+  },
+  "variables": {
+    "virtualNetworkName": "[concat(parameters('labName'), '-VNet-', resourceGroup().location )]",
+    "vnetID": "[resourceId('Microsoft.Network/virtualNetworks', variables('virtualNetworkName'))]",
+    "gatewaySubnetName": "GatewaySubnet",
+    "webSubnetName": "WebSubnet",
+    "appSubnetName": "AppSubnet",
+    "dataSubnetName": "DataSubnet",
+    "gatewaySubnetId": "[concat(variables('vnetID'), '/subnets/', variables('gatewaySubnetName'))]",
+    "webSubnetId": "[concat(variables('vnetID'), '/subnets/', variables('webSubnetName'))]",
+    "appSubnetId": "[concat(variables('vnetID'), '/subnets/', variables('appSubnetName'))]",
+    "dataSubnetId": "[concat(variables('vnetID'), '/subnets/', variables('dataSubnetName'))]",
+    "repoType": "VsoGit",
+    "vnetArray": "[split(parameters('azureVnetAddressPrefix'),'.')]",
+    "vnetPrefix": "[ concat(variables('vnetArray')[0],'.', variables('vnetArray')[1],'.')]"
+  },
+  "resources": [
+    {
+      "apiVersion": "2015-06-15",
+      "type": "Microsoft.Network/virtualNetworks",
+      "name": "[variables('virtualNetworkName')]",
+      "location": "[resourceGroup().location]",
+      "properties": {
+        "addressSpace": {
+          "addressPrefixes": [
+            "[parameters('azureVnetAddressPrefix')]"
           ]
-        }
-      },
-      {
-        "apiVersion": "[variables('api-version')]",
-        "type": "Microsoft.Network/publicIPAddresses",
-        "name": "[parameters('gatewayPublicIPName')]",
-        "location": "[resourceGroup().location]",
-        "properties": {
-          "publicIPAllocationMethod": "Dynamic"
-        }
-      },
-      {
-        "apiVersion": "[variables('api-version')]",
-        "type": "Microsoft.Network/virtualNetworkGateways",
-        "name": "[parameters('gatewayName')]",
-        "location": "[resourceGroup().location]",
-        "dependsOn": [
-          "[concat('Microsoft.Network/publicIPAddresses/', parameters('gatewayPublicIPName'))]",
-          "[concat('Microsoft.Network/virtualNetworks/', parameters('virtualNetworkName'))]"
-        ],
-        "properties": {
-          "ipConfigurations": [
-            {
-              "properties": {
-                "privateIPAllocationMethod": "Dynamic",
-                "subnet": {
-                  "id": "[variables('gatewaySubnetRef')]"
-                },
-                "publicIPAddress": {
-                  "id": "[resourceId('Microsoft.Network/publicIPAddresses',parameters('gatewayPublicIPName'))]"
+        },
+        "subnets": [
+          {
+            "name": "[variables('gatewaySubnetName')]",
+            "properties": {
+              "addressPrefix": "[concat(variables('vnetPrefix'),'1.0/27')]"
+            }
+          },
+          {
+            "name": "[variables('webSubnetName')]",
+            "properties": {
+              "addressPrefix": "[concat(variables('vnetPrefix'),'2.0/24')]"
+            }
+          },
+          {
+            "name": "[variables('appSubnetName')]",
+            "properties": {
+              "addressPrefix": "[concat(variables('vnetPrefix'),'3.0/24')]"
+            }
+          },
+          {
+            "name": "[variables('dataSubnetName')]",
+            "properties": {
+              "addressPrefix": "[concat(variables('vnetPrefix'),'4.0/24')]"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "apiVersion": "2016-05-15",
+      "type": "Microsoft.DevTestLab/labs",
+      "name": "[parameters('labName')]",
+      "location": "[resourceGroup().location]",
+      "resources": [
+        {
+          "apiVersion": "2016-05-15",
+          "name": "[variables('virtualNetworkName')]",
+          "type": "virtualnetworks",
+          "dependsOn": [
+            "[resourceId('Microsoft.DevTestLab/labs', parameters('labName'))]"
+          ],
+          "properties": {
+            "description": "Existing Compute virtual network associated as part of the lab creation process.",
+            "externalProviderResourceId": "[variables('vnetID')]",
+            "subnetOverrides": [
+              {
+                "name": "[variables('gatewaySubnetName')]",
+                "resourceId": "[variables('gatewaySubnetId')]",
+                "useInVmCreationPermission": "Deny",
+                "usePublicIpAddressPermission": "Deny"
+              },
+              {
+                "name": "[variables('webSubnetName')]",
+                "resourceId": "[variables('webSubnetId')]",
+                "useInVmCreationPermission": "Allow",
+                "usePublicIpAddressPermission": "Allow",
+                "sharedPublicIpAddressConfiguration": {
+                  "allowedPorts": [
+                    {
+                      "transportProtocol": "tcp",
+                      "backendPort": 3389
+                    },
+                    {
+                      "transportProtocol": "tcp",
+                      "backendPort": 22
+                    }
+                  ]
                 }
               },
-              "name": "vnetGatewayConfig"
-            }
+              {
+                "name": "[variables('appSubnetName')]",
+                "resourceId": "[variables('appSubnetId')]",
+                "useInVmCreationPermission": "Allow",
+                "usePublicIpAddressPermission": "Deny"
+              },
+              {
+                "name": "[variables('dataSubnetName')]",
+                "resourceId": "[variables('dataSubnetId')]",
+                "useInVmCreationPermission": "Allow",
+                "usePublicIpAddressPermission": "Deny"
+              }
+            ]
+          }
+        },
+        {
+          "apiVersion": "2016-05-15",
+          "name": "LabVmsShutdown",
+          "type": "schedules",
+          "dependsOn": [
+            "[resourceId('Microsoft.DevTestLab/labs', parameters('labName'))]"
           ],
-          "sku": {
-            "name": "[parameters('gatewaySku')]",
-            "tier": "[parameters('gatewaySku')]"
-          },
-          "gatewayType": "Vpn",
-          "vpnType": "[variables('vpnType')]",
-          "enableBgp": "false"
+          "properties": {
+            "status": "[parameters('autoShutdownVM')]",
+            "taskType": "LabVmsShutdownTask",
+            "timeZoneId": "[string(parameters('timeZoneId'))]",
+            "notificationSettings": {
+              "status": "Enabled",
+              "timeInMinutes": 15
+            },
+            "dailyRecurrence": {
+              "time": "[string(parameters('labVMShutdownTime'))]"
+            }
+          }
+        },
+        {
+          "apiVersion": "2016-05-15",
+          "name": "autoShutdown",
+          "type": "notificationchannels",
+          "dependsOn": [
+            "[resourceId('Microsoft.DevTestLab/labs', parameters('labName'))]"
+          ],
+          "properties": {
+            "events": [
+              {
+                "eventName": "AutoShutdown"
+              }
+            ],
+            "webHookUrl": "http://autoshutdownwebhook"
+          }
+        },
+        {
+          "apiVersion": "2016-05-15",
+          "name": "costThreshold",
+          "type": "notificationchannels",
+          "dependsOn": [
+            "[resourceId('Microsoft.DevTestLab/labs', parameters('labName'))]"
+          ],
+          "properties": {
+            "events": [
+              {
+                "eventName": "Cost"
+              }
+            ],
+            "webHookUrl": "http://costwebhook"
+          }
+        },
+        {
+          "apiVersion": "2016-05-15",
+          "name": "TargetCost",
+          "type": "costs",
+          "dependsOn": [
+            "[resourceId('Microsoft.DevTestLab/labs', parameters('labName'))]"
+          ],
+          "properties": {
+            "targetCost": {
+              "cycleStartDateTime": "[concat(parameters('labStartDate'),'T00:00:00.0000000')]",
+              "cycleEndDateTime": "[concat(parameters('estLabEndDate'),'T23:59:59.0000000')]",
+              "cycleType": "[parameters('cycleType')]",
+              "status": "Enabled",
+              "target": "[parameters('labCost')]",
+              "costThresholds": [
+                {
+                  "thresholdId": "11f61cb3-6db9-47c7-b8b7-baf7031cb270",
+                  "displayOnChart": "[parameters('displayOnChart25')]",
+                  "sendNotificationWhenExceeded": "[parameters('sendNotification25')]",
+                  "percentageThreshold": {
+                    "thresholdValue": 25
+                  }
+                },
+                {
+                  "thresholdId": "c92dc879-592a-4f2c-b1e4-af59615edfb9",
+                  "displayOnChart": "[parameters('displayOnChart50')]",
+                  "sendNotificationWhenExceeded": "[parameters('sendNotification50')]",
+                  "percentageThreshold": {
+                    "thresholdValue": 50
+                  }
+                },
+                {
+                  "thresholdId": "e4621ff2-4745-4cda-910a-2033e1775f93",
+                  "displayOnChart": "[parameters('displayOnChart75')]",
+                  "sendNotificationWhenExceeded": "[parameters('sendNotification75')]",
+                  "percentageThreshold": {
+                    "thresholdValue": 75
+                  }
+                },
+                {
+                  "thresholdId": "00a71ca4-6809-4622-afde-8f08eac1f58d",
+                  "displayOnChart": "[parameters('displayOnChart100')]",
+                  "sendNotificationWhenExceeded": "[parameters('sendNotification100')]",
+                  "percentageThreshold": {
+                    "thresholdValue": 100
+                  }
+                },
+                {
+                  "thresholdId": "21639972-de66-4078-b61b-dc9a1ac2da78",
+                  "displayOnChart": "[parameters('displayOnChart125')]",
+                  "sendNotificationWhenExceeded": "[parameters('sendNotification125')]",
+                  "percentageThreshold": {
+                    "thresholdValue": 125
+                  }
+                }
+              ]
+            }
+          }
+        },
+        {
+          "apiVersion": "2016-05-15",
+          "name": "LabVmAutoStart",
+          "type": "schedules",
+          "dependsOn": [
+            "[resourceId('Microsoft.DevTestLab/labs', parameters('labName'))]"
+          ],
+          "properties": {
+            "status": "[parameters('autoStartupVM')]",
+            "taskType": "LabVmsStartupTask",
+            "timeZoneId": "[string(parameters('timeZoneId'))]",
+            "weeklyRecurrence": {
+              "weekdays": [
+                "Monday",
+                "Tuesday",
+                "Wednesday",
+                "Thursday",
+                "Friday"
+              ],
+              "time": "[string(parameters('labVMStartupTime'))]"
+            }
+          }
+        },
+        {
+          "apiVersion": "2016-05-15",
+          "name": "default/MaxVmsAllowedPerUser",
+          "type": "policySets/policies",
+          "dependsOn": [
+            "[resourceId('Microsoft.DevTestLab/labs', parameters('labName'))]"
+          ],
+          "properties": {
+            "description": "Restricts the maximum number of VMs that can be created by a user",
+            "factName": "UserOwnedLabVmCount",
+            "threshold": "[string(parameters('maxVMPerUser'))]",
+            "evaluatorType": "MaxValuePolicy",
+            "status": "[parameters('restrictsVMPerUser')]"
+          }
+        },
+        {
+          "apiVersion": "2016-05-15",
+          "name": "default/UserOwnedLabVmCountInInternetSubnet",
+          "type": "policySets/policies",
+          "dependsOn": [
+            "[resourceId('Microsoft.DevTestLab/labs', parameters('labName'))]"
+          ],
+          "properties": {
+            "description": "Restricts the maximum number of VMs that a user can create in the internet facing subnet",
+            "factName": "UserOwnedLabVmCountInSubnet",
+            "factData": "[concat('/subscriptions/', subscription().subscriptionId, '/resourceGroups/',resourceGroup().name,'/providers/Microsoft.Network/virtualNetworks/', variables('virtualNetworkName'),'/subnets/', variables('webSubnetName'))]",
+            "threshold": "[string(parameters('maxVMPerUser'))]",
+            "evaluatorType": "MaxValuePolicy",
+            "status": "Enabled"
+          }
+        },
+        {
+          "apiVersion": "2016-05-15",
+          "name": "default/UserOwnedLabVmCountInApplicationSubnet",
+          "type": "policySets/policies",
+          "dependsOn": [
+            "[resourceId('Microsoft.DevTestLab/labs', parameters('labName'))]"
+          ],
+          "properties": {
+            "description": "Restricts the maximum number of VMs that a user can create in the application subnet",
+            "factName": "UserOwnedLabVmCountInSubnet",
+            "factData": "[concat('/subscriptions/', subscription().subscriptionId, '/resourceGroups/',resourceGroup().name,'/providers/Microsoft.Network/virtualNetworks/', variables('virtualNetworkName'),'/subnets/', variables('appSubnetName'))]",
+            "threshold": "[string(parameters('maxVMPerUser'))]",
+            "evaluatorType": "MaxValuePolicy",
+            "status": "Enabled"
+          }
+        },
+        {
+          "apiVersion": "2016-05-15",
+          "name": "default/UserOwnedLabVmCountInDataSubnet",
+          "type": "policySets/policies",
+          "dependsOn": [
+            "[resourceId('Microsoft.DevTestLab/labs', parameters('labName'))]"
+          ],
+          "properties": {
+            "description": "Restricts the maximum number of VMs that a user can create in the data subnet",
+            "factName": "UserOwnedLabVmCountInSubnet",
+            "factData": "[concat('/subscriptions/', subscription().subscriptionId, '/resourceGroups/',resourceGroup().name,'/providers/Microsoft.Network/virtualNetworks/', variables('virtualNetworkName'),'/subnets/', variables('dataSubnetName'))]",
+            "threshold": "[string(parameters('maxVMPerUser'))]",
+            "evaluatorType": "MaxValuePolicy",
+            "status": "Enabled"
+          }
+        },
+        {
+          "apiVersion": "2016-05-15",
+          "name": "default/UserOwnedLabVmCountInGatewaySubnet",
+          "type": "policySets/policies",
+          "dependsOn": [
+            "[resourceId('Microsoft.DevTestLab/labs', parameters('labName'))]"
+          ],
+          "properties": {
+            "description": "Restricts the maximum number of VMs that a user can create in the gateway subnet",
+            "factName": "UserOwnedLabVmCountInSubnet",
+            "factData": "[concat('/subscriptions/', subscription().subscriptionId, '/resourceGroups/',resourceGroup().name,'/providers/Microsoft.Network/virtualNetworks/', variables('virtualNetworkName'),'/subnets/', variables('gatewaySubnetName'))]",
+            "threshold": "0",
+            "evaluatorType": "MaxValuePolicy",
+            "status": "Enabled"
+          }
+        },
+        {
+          "apiVersion": "2016-05-15",
+          "name": "default/MaxPremiumVmsAllowedPerUser",
+          "type": "policySets/policies",
+          "dependsOn": [
+            "[resourceId('Microsoft.DevTestLab/labs', parameters('labName'))]"
+          ],
+          "properties": {
+            "description": "Restricts the maximum number of Premium VMs that can be created by a user",
+            "factName": "UserOwnedLabPremiumVmCount",
+            "threshold": "[string(parameters('maxPremiumVMPerUser'))]",
+            "evaluatorType": "MaxValuePolicy",
+            "status": "[parameters('restrictsPremiumVMPerUser')]"
+          }
+        },
+        {
+          "apiVersion": "2016-05-15",
+          "name": "default/MaxVmsAllowedPerLab",
+          "type": "policySets/policies",
+          "dependsOn": [
+            "[resourceId('Microsoft.DevTestLab/labs', parameters('labName'))]"
+          ],
+          "properties": {
+            "description": "Restricts the maximum number of VMs that can be created in a lab",
+            "factName": "LabVmCount",
+            "threshold": "[string(parameters('maxVMPerLab'))]",
+            "evaluatorType": "MaxValuePolicy",
+            "status": "[parameters('restrictsVMPerLab')]"
+          }
+        },
+        {
+          "apiVersion": "2016-05-15",
+          "name": "default/MaxPremiumVmsAllowedPerLab",
+          "type": "policySets/policies",
+          "dependsOn": [
+            "[resourceId('Microsoft.DevTestLab/labs', parameters('labName'))]"
+          ],
+          "properties": {
+            "description": "Restricts the maximum number of Premium VMs that can be created in a lab",
+            "factName": "LabPremiumVmCount",
+            "threshold": "[string(parameters('maxPremiumVMPerLab'))]",
+            "evaluatorType": "MaxValuePolicy",
+            "status": "[parameters('restrictsPremiumVMPerLab')]"
+          }
+        },
+        {
+          "apiVersion": "2016-05-15",
+          "name": "default/AllowedVmSizesInLab",
+          "type": "policySets/policies",
+          "dependsOn": [
+            "[resourceId('Microsoft.DevTestLab/labs', parameters('labName'))]"
+          ],
+          "properties": {
+            "description": "Restricts the available VM sizes that can be created in a lab",
+            "factName": "LabVmSize",
+            "threshold": "[concat('[', trim(parameters('allowedVMSizes')), ']')]",
+            "evaluatorType": "AllowedValuesPolicy",
+            "status": "[parameters('restrictVMSizes')]"
+          }
+        },
+        {
+          "apiVersion": "2016-05-15",
+          "name": "default/GalleryImage",
+          "type": "policySets/policies",
+          "id": "[concat('/subscriptions/', subscription().subscriptionId, '/resourcegroups/',resourceGroup().name,'/providers/microsoft.devtestlab/labs/', parameters('labName'),'/policysets/default/policies/galleryimage')]",
+          "dependsOn": [
+            "[resourceId('Microsoft.DevTestLab/labs', parameters('labName'))]"
+          ],
+          "properties": {
+            "factName": "GalleryImage",
+            "status": "[parameters('restrictGalleryImages')]",
+            "evaluatorType": "AllowedValuesPolicy",
+            "threshold": "[string(parameters('restrictedGalleryImagesList'))]"
+          }
+        },
+        {
+          "apiVersion": "2016-05-15",
+          "name": "SLArtifacts",
+          "type": "artifactsources",
+          "dependsOn": [
+            "[resourceId('Microsoft.DevTestLab/labs', parameters('labName'))]"
+          ],
+          "properties": {
+            "uri": "https://slukdev.visualstudio.com/Cloud%20Platform/_git/Artifacts",
+            "folderPath": "/",
+            "branchRef": "",
+            "displayName": "SL Artifacts",
+            "securityToken": "[parameters('artifactRepoSecurityToken')]",
+            "sourceType": "[variables('repoType')]",
+            "status": "Enabled"
+          }
+        },
+        {
+          "apiVersion": "2016-05-15",
+          "name": "SLTemplates",
+          "type": "artifactsources",
+          "dependsOn": [
+            "[resourceId('Microsoft.DevTestLab/labs', parameters('labName'))]"
+          ],
+          "properties": {
+            "uri": "https://slukdev.visualstudio.com/Cloud%20Platform/_git/Templates",
+            "armTemplateFolderPath": "/",
+            "branchRef": "",
+            "displayName": "SL ARM Templates",
+            "securityToken": "[parameters('artifactRepoSecurityToken')]",
+            "sourceType": "[variables('repoType')]",
+            "status": "Enabled"
+          }
         }
-      }
-    ]
+      ]
+    }
+  ],
+  "outputs": {}
 }
-
-
